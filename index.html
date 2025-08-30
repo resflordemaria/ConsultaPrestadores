@@ -60,7 +60,7 @@
   <h1>Consulta Prestadores - Flor de Maria</h1>
 
   <!-- Caixa de seleção de categorias -->
-  <label for="categoriaSelect"><strong>Filtrar por categoria:</strong></label>
+  <label for="categoriaSelect"><strong>Selecione o tipo de profissional:</strong></label>
   <select id="categoriaSelect">
     <option value="todas">Todas</option>
   </select>
@@ -87,12 +87,13 @@
           complete: function(result) {
             const rows = result.data;
 
-            // Agrupar por categoria
+            // Normalizar campos (tratar maiúsculas/minúsculas)
             categorias = {};
             rows.forEach(l => {
-              const nome = l["Nome"];
-              const telefone = l["Telefone"];
-              const categoria = l["Categoria"];
+              const nome = l["Nome"] || l["nome"];
+              const telefone = l["Telefone"] || l["telefone"];
+              const categoria = l["Categoria"] || l["categoria"];
+              if (!nome || !categoria) return; // ignora linhas vazias
               if (!categorias[categoria]) categorias[categoria] = [];
               categorias[categoria].push({ nome, telefone });
             });
@@ -158,4 +159,7 @@
       container.innerHTML = html;
     }
 
-    carregarDad
+    carregarDados();
+  </script>
+</body>
+</html>
