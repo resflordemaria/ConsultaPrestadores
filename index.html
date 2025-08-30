@@ -61,11 +61,15 @@
         opt.textContent = cat;
         select.appendChild(opt);
       });
+
+      // Exibe todos os dados inicialmente
+      filtrarDados();
     }
 
     function filtrarDados() {
       const categoria = document.getElementById('categoria').value;
-      const resultados = todosOsDados.filter(l => l[2] === categoria);
+      // Se categoria estiver vazia, exibe todos os dados
+      const resultados = categoria ? todosOsDados.filter(l => l[2] === categoria) : todosOsDados;
 
       const tbody = document.querySelector('#tabelaResultados tbody');
       tbody.innerHTML = '';
@@ -73,28 +77,3 @@
       resultados.forEach(l => {
         const nome = l[0] || '';
         let telefone = l[1] || '';
-
-        // Limpa o número, remove tudo que não for dígito
-        telefone = telefone.replace(/\D/g, '');
-
-        // Adiciona o código do país +55 e DDD 82 (se necessário)
-        if (telefone.length === 8 || telefone.length === 9) {
-          telefone = '5582' + telefone;
-        }
-
-        const linkZap = `https://wa.me/${telefone}`;
-
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${nome}</td>
-          <td>${l[1] || ''}</td>
-          <td><a href="${linkZap}" target="_blank">Falar no WhatsApp</a></td>
-        `;
-        tbody.appendChild(row);
-      });
-    }
-
-    carregarCategoriasEDados();
-  </script>
-</body>
-</html>
