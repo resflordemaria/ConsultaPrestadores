@@ -34,40 +34,49 @@
     </tbody>
   </table>
 
-  <!-- PapaParse CDN para ler CSV corretamente -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-
   <script>
-    // LINK DO CSV PUBLICADO NA WEB
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTr4FxiY5aB2DdJ_bQfxg-ZRwud8xTsK_W2M8a2lnk6xtRd1854GH7nmRQM2tiWICBqIi6za3eKxDuZ/pub?gid=0&single=true&output=csv';
 
     let todosOsDados = [];
 
     async function carregarCategoriasEDados() {
-      const res = await fetch(CSV_URL);
-      const csvText = await res.text();
+      try {
+        const res = await fetch(CSV_URL);
+        const csvText = await res.text();
 
-      const parsed = Papa.parse(csvText, {
-        header: true,       // usa primeira linha como cabeçalho
-        skipEmptyLines: true
-      });
+        // Separar linhas
+        const linhas = csvText.trim().split(/\r?\n/);
 
-      todosOsDados = parsed.data;
+        // Cabeçalhos (normaliza removendo acentos e espaços)
+        const cabecalhos = linhas[0].split(',').map(h => h.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
 
-      // Extrair categorias únicas
-      const categorias = [...new Set(todosOsDados.map(l => l.Categoria))].filter(Boolean).sort();
+        // Dados
+        todosOsDados = linhas.slice(1).map(linha => {
+          const colunas = linha.split(',').map(c => c.trim());
+          let obj = {};
+          cabecalhos.forEach((h, i) => obj[h] = colunas[i] || '');
+          return obj;
+        });
 
-      const select = document.getElementById('categoria');
-      select.innerHTML = '<option value="">-- Selecione --</option>';
-      categorias.forEach(cat => {
-        const opt = document.createElement('option');
-        opt.value = cat;
-        opt.textContent = cat;
-        select.appendChild(opt);
-      });
+        // Extrair categorias únicas (usando cabeçalho “Categoria” sem acento)
+        const categorias = [...new Set(todosOsDados.map(l => l.Categoria))].filter(Boolean).sort();
 
-      // Exibe todos os dados inicialmente
-      filtrarDados();
+        const select = document.getElementById('categoria');
+        select.innerHTML = '<option value="">-- Selecione --</option>';
+        categorias.forEach(cat => {
+          const opt = document.createElement('option');
+          opt.value = cat;
+          opt.textContent = cat;
+          select.appendChild(opt);
+        });
+
+        // Exibe todos os dados inicialmente
+        filtrarDados();
+      } catch (err) {
+        console.error('Erro ao carregar dados:', err);
+        const tbody = document.querySelector('#tabelaResultados tbody');
+        tbody.innerHTML = `<tr><td colspan="3">Erro ao carregar dados. Verifique a planilha.</td></tr>`;
+      }
     }
 
     function filtrarDados() {
@@ -77,14 +86,16 @@
       const tbody = document.querySelector('#tabelaResultados tbody');
       tbody.innerHTML = '';
 
+      if (resultados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3">Nenhum resultado encontrado.</td></tr>`;
+        return;
+      }
+
       resultados.forEach(l => {
         const nome = l.Nome || '';
         let telefone = l.Telefone || '';
 
-        // Limpa o número, remove tudo que não for dígito
         telefone = telefone.replace(/\D/g, '');
-
-        // Adiciona o código do país +55 e DDD 82 (se necessário)
         if (telefone.length === 8 || telefone.length === 9) {
           telefone = '5582' + telefone;
         }
@@ -92,16 +103,4 @@
         const linkZap = `https://wa.me/${telefone}`;
 
         const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${nome}</td>
-          <td>${l.Telefone || ''}</td>
-          <td><a href="${linkZap}" target="_blank">Falar no WhatsApp</a></td>
-        `;
-        tbody.appendChild(row);
-      });
-    }
-
-    carregarCategoriasEDados();
-  </script>
-</body>
-</html>
+        row.innerHTML
