@@ -1,139 +1,76 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Prestadores Flor de Maria</title>
   <style>
+    :root { color-scheme: light; }
     body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
-    h1 { color: #333; }
-    label, select, table, #status { margin-top: 10px; display: block; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; background: white; }
+    h1 { color: #333; margin-bottom: 4px; }
+    label, select, #status { margin-top: 10px; display: block; }
+    #status { font-style: italic; color: #555; margin: 12px 0 4px; }
+
+    /* Blocos por categoria */
+    .categoria-bloco { margin-top: 28px; }
+    .categoria-titulo {
+      background: #e8e8e8;
+      border: 1px solid #d5d5d5;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-weight: bold;
+    }
+
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; background: white; }
     th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
-    th { background-color: #eee; }
-    .categoria-row { background-color: #ddd; font-weight: bold; }
-    #status { font-style: italic; color: #555; }
+    th { background-color: #f3f3f3; }
+    a { text-decoration: none; }
   </style>
 </head>
 <body>
   <h1>Prestadores Flor de Maria</h1>
 
-  <label for="categoria">Selecione o tipo de profissional:</label>
+  <label for="categoria">Filtrar por tipo de profissional:</label>
   <select id="categoria" onchange="filtrarDados()">
-    <option value="">-- Todas --</option>
+    <option value="">-- Todas as categorias --</option>
   </select>
 
   <div id="status">Carregando dados...</div>
 
-  <table id="tabelaResultados">
-    <thead>
-      <tr>
-        <th>Nome</th>
-        <th>Telefone</th>
-        <th>WhatsApp</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Resultados serão inseridos aqui -->
-    </tbody>
-  </table>
+  <div id="resultados"></div>
 
-  <!-- PapaParse para CSV robusto -->
+  <!-- PapaParse para leitura robusta de CSV -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script>
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTr4FxiY5aB2DdJ_bQfxg-ZRwud8xTsK_W2M8a2lnk6xtRd1854GH7nmRQM2tiWICBqIi6za3eKxDuZ/pub?gid=0&single=true&output=csv';
-    let todosOsDados = [];
 
-    async function carregarCategoriasEDados() {
-      const statusDiv = document.getElementById('status');
-      statusDiv.textContent = 'Carregando dados...';
-      try {
-        const res = await fetch(CSV_URL);
-        const csvText = await res.text();
+    // dados normalizados = { nome, telefone, categoria }
+    let dados = [];
+    let categoriasOrdenadas = [];
 
-        const parsed = Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true
-        });
-
-        todosOsDados = parsed.data;
-
-        // Extrair categorias únicas
-        const categorias = [...new Set(todosOsDados.map(l => l.Categoria).filter(Boolean))].sort();
-
-        const select = document.getElementById('categoria');
-        select.innerHTML = '<option value="">-- Todas --</option>';
-        categorias.forEach(cat => {
-          const opt = document.createElement('option');
-          opt.value = cat;
-          opt.textContent = cat;
-          select.appendChild(opt);
-        });
-
-        // Exibe todos os dados inicialmente agrupados por categoria
-        filtrarDados();
-        statusDiv.textContent = '';
-      } catch (err) {
-        console.error('Erro ao carregar dados:', err);
-        statusDiv.textContent = 'Erro ao carregar dados. Verifique a planilha.';
-        const tbody = document.querySelector('#tabelaResultados tbody');
-        tbody.innerHTML = `<tr><td colspan="3">Erro ao carregar dados.</td></tr>`;
-      }
-    }
-
-    function filtrarDados() {
-      const categoriaSelecionada = document.getElementById('categoria').value;
-      const tbody = document.querySelector('#tabelaResultados tbody');
-      tbody.innerHTML = '';
-
-      // Agrupar por categoria ou filtrar se selecionada
-      let categoriasAgrupadas;
-      if (categoriaSelecionada) {
-        categoriasAgrupadas = { [categoriaSelecionada]: todosOsDados.filter(l => l.Categoria === categoriaSelecionada) };
-      } else {
-        categoriasAgrupadas = {};
-        todosOsDados.forEach(l => {
-          if (!l.Categoria) return;
-          if (!categoriasAgrupadas[l.Categoria]) categoriasAgrupadas[l.Categoria] = [];
-          categoriasAgrupadas[l.Categoria].push(l);
-        });
-      }
-
-      const nomesCategorias = Object.keys(categoriasAgrupadas);
-      if (nomesCategorias.length === 0) {
-        document.getElementById('status').textContent = 'Nenhum resultado encontrado.';
-        return;
-      } else {
-        document.getElementById('status').textContent = '';
-      }
-
-      nomesCategorias.forEach(cat => {
-        // Linha de categoria
-        const catRow = document.createElement('tr');
-        catRow.classList.add('categoria-row');
-        catRow.innerHTML = `<td colspan="3">${cat}</td>`;
-        tbody.appendChild(catRow);
-
-        categoriasAgrupadas[cat].forEach(l => {
-          const nome = l.Nome || '';
-          const telefoneOriginal = l.Telefone || '';
-          let telefoneZap = telefoneOriginal.replace(/\D/g, '');
-          if (telefoneZap.length === 8 || telefoneZap.length === 9) {
-            telefoneZap = '5582' + telefoneZap;
-          }
-          const linkZap = `https://wa.me/${telefoneZap}`;
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${nome}</td>
-            <td>${telefoneOriginal}</td>
-            <td><a href="${linkZap}" target="_blank">Falar no WhatsApp</a></td>
-          `;
-          tbody.appendChild(row);
-        });
+    // Detecta colunas (case-insensitive)
+    function detectarCampos(headers) {
+      const map = {};
+      headers.forEach(h => {
+        const k = h.trim().toLowerCase();
+        if (k.includes('nome') && !map.nome) map.nome = h;
+        if ((k.includes('tel') || k.includes('fone')) && !map.telefone) map.telefone = h;
+        if (k.includes('categoria') && !map.categoria) map.categoria = h;
       });
+      return map;
     }
 
-    carregarCategoriasEDados();
-  </script>
-</body>
-</html>
+    function normalizarNumeroParaZap(t) {
+      if (!t) return '';
+      let d = String(t).replace(/\D/g, ''); // só dígitos
+
+      // já começa com 55? então ok
+      if (d.startsWith('55')) return d;
+
+      // tem DDD? (10 fixo, 11 móvel)
+      if (d.length === 10 || d.length === 11) return '55' + d;
+
+      // só número local (8 ou 9 dígitos): assume DDD 82
+      if (d.length === 8 || d.length === 9) return '5582' + d;
+
+      // qualquer outro caso: não c
