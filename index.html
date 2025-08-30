@@ -12,7 +12,7 @@
     }
     h1 {
       color: #333;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
     h2 {
       background: #ddd;
@@ -24,7 +24,7 @@
       border-collapse: collapse;
       margin-top: 10px;
       background: white;
-      table-layout: auto; /* largura baseada no conteúdo (desktop) */
+      table-layout: auto;
       width: auto;
       min-width: 300px;
     }
@@ -32,20 +32,25 @@
       border: 1px solid #ccc;
       padding: 8px 12px;
       text-align: left;
-      white-space: nowrap; /* evita quebra de texto */
+      white-space: nowrap;
     }
     th {
       background-color: #eee;
     }
+    select {
+      margin-bottom: 20px;
+      padding: 6px 10px;
+      font-size: 14px;
+    }
 
-    /* --- Ajuste para celulares --- */
+    /* --- Responsivo --- */
     @media (max-width: 768px) {
       table {
-        width: 100%;        /* ocupa toda a tela */
-        table-layout: fixed; /* força ajuste proporcional */
+        width: 100%;
+        table-layout: fixed;
       }
       th, td {
-        white-space: normal; /* permite quebra de linha */
+        white-space: normal;
         word-wrap: break-word;
       }
     }
@@ -53,11 +58,20 @@
 </head>
 <body>
   <h1>Consulta Prestadores - Flor de Maria</h1>
+
+  <!-- Caixa de seleção de categorias -->
+  <label for="categoriaSelect"><strong>Filtrar por categoria:</strong></label>
+  <select id="categoriaSelect">
+    <option value="todas">Todas</option>
+  </select>
+
   <div id="conteudo">Carregando dados...</div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script>
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTr4FxiY5aB2DdJ_bQfxg-ZRwud8xTsK_W2M8a2lnk6xtRd1854GH7nmRQM2tiWICBqIi6za3eKxDuZ/pub?gid=0&single=true&output=csv";
+    let categorias = {};
+    let todasCategorias = [];
 
     async function carregarDados() {
       const container = document.getElementById("conteudo");
@@ -74,7 +88,7 @@
             const rows = result.data;
 
             // Agrupar por categoria
-            const categorias = {};
+            categorias = {};
             rows.forEach(l => {
               const nome = l["Nome"];
               const telefone = l["Telefone"];
@@ -83,35 +97,24 @@
               categorias[categoria].push({ nome, telefone });
             });
 
-            // Montar HTML
-            let html = "";
-            for (const cat in categorias) {
-              html += `<h2>${cat}</h2>`;
-              html += `<table>
-                        <thead>
-                          <tr>
-                            <th>Nome</th>
-                            <th>Telefone</th>
-                            <th>WhatsApp</th>
-                          </tr>
-                        </thead>
-                        <tbody>`;
-              categorias[cat].forEach(item => {
-                let telefoneLimpo = (item.telefone || "").replace(/\D/g, "");
-                if (telefoneLimpo.length === 8 || telefoneLimpo.length === 9) {
-                  telefoneLimpo = "5582" + telefoneLimpo;
-                }
-                const linkZap = telefoneLimpo ? `<a href="https://wa.me/${telefoneLimpo}" target="_blank">Falar no WhatsApp</a>` : "";
-                html += `<tr>
-                          <td>${item.nome || ""}</td>
-                          <td>${item.telefone || ""}</td>
-                          <td>${linkZap}</td>
-                        </tr>`;
-              });
-              html += "</tbody></table>";
-            }
+            todasCategorias = Object.keys(categorias);
 
-            container.innerHTML = html;
+            // Preencher select
+            const select = document.getElementById("categoriaSelect");
+            todasCategorias.forEach(cat => {
+              const option = document.createElement("option");
+              option.value = cat;
+              option.textContent = cat;
+              select.appendChild(option);
+            });
+
+            // Render inicial (todas categorias)
+            renderizar("todas");
+
+            // Evento de mudança
+            select.addEventListener("change", () => {
+              renderizar(select.value);
+            });
           }
         });
       } catch (error) {
@@ -120,7 +123,39 @@
       }
     }
 
-    carregarDados();
-  </script>
-</body>
-</html>
+    function renderizar(filtro) {
+      const container = document.getElementById("conteudo");
+      let html = "";
+
+      const categoriasFiltradas = filtro === "todas" ? todasCategorias : [filtro];
+
+      categoriasFiltradas.forEach(cat => {
+        html += `<h2>${cat}</h2>`;
+        html += `<table>
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Telefone</th>
+                      <th>WhatsApp</th>
+                    </tr>
+                  </thead>
+                  <tbody>`;
+        categorias[cat].forEach(item => {
+          let telefoneLimpo = (item.telefone || "").replace(/\D/g, "");
+          if (telefoneLimpo.length === 8 || telefoneLimpo.length === 9) {
+            telefoneLimpo = "5582" + telefoneLimpo;
+          }
+          const linkZap = telefoneLimpo ? `<a href="https://wa.me/${telefoneLimpo}" target="_blank">Falar no WhatsApp</a>` : "";
+          html += `<tr>
+                    <td>${item.nome || ""}</td>
+                    <td>${item.telefone || ""}</td>
+                    <td>${linkZap}</td>
+                  </tr>`;
+        });
+        html += "</tbody></table>";
+      });
+
+      container.innerHTML = html;
+    }
+
+    carregarDad
