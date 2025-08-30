@@ -7,10 +7,11 @@
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
     h1 { color: #333; }
-    label, select, table { margin-top: 10px; display: block; }
+    label, select, table, #status { margin-top: 10px; display: block; }
     table { border-collapse: collapse; width: 100%; margin-top: 20px; background: white; }
     th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
     th { background-color: #eee; }
+    #status { font-style: italic; color: #555; }
   </style>
 </head>
 <body>
@@ -20,6 +21,8 @@
   <select id="categoria" onchange="filtrarDados()">
     <option value="">-- Carregando categorias --</option>
   </select>
+
+  <div id="status">Carregando dados...</div>
 
   <table id="tabelaResultados">
     <thead>
@@ -34,35 +37,31 @@
     </tbody>
   </table>
 
+  <!-- PapaParse para CSV robusto -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script>
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTr4FxiY5aB2DdJ_bQfxg-ZRwud8xTsK_W2M8a2lnk6xtRd1854GH7nmRQM2tiWICBqIi6za3eKxDuZ/pub?gid=0&single=true&output=csv';
-
     let todosOsDados = [];
 
     async function carregarCategoriasEDados() {
+      const statusDiv = document.getElementById('status');
+      statusDiv.textContent = 'Carregando dados...';
       try {
         const res = await fetch(CSV_URL);
         const csvText = await res.text();
 
-        // Separar linhas
-        const linhas = csvText.trim().split(/\r?\n/);
-
-        // Cabeçalhos (normaliza removendo acentos e espaços)
-        const cabecalhos = linhas[0].split(',').map(h => h.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
-
-        // Dados
-        todosOsDados = linhas.slice(1).map(linha => {
-          const colunas = linha.split(',').map(c => c.trim());
-          let obj = {};
-          cabecalhos.forEach((h, i) => obj[h] = colunas[i] || '');
-          return obj;
+        const parsed = Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true
         });
 
-        // Extrair categorias únicas (usando cabeçalho “Categoria” sem acento)
-        const categorias = [...new Set(todosOsDados.map(l => l.Categoria))].filter(Boolean).sort();
+        todosOsDados = parsed.data;
+
+        // Extrair categorias únicas
+        const categorias = [...new Set(todosOsDados.map(l => l.Categoria).filter(Boolean))].sort();
 
         const select = document.getElementById('categoria');
-        select.innerHTML = '<option value="">-- Selecione --</option>';
+        select.innerHTML = '<option value="">-- Todas --</option>';
         categorias.forEach(cat => {
           const opt = document.createElement('option');
           opt.value = cat;
@@ -72,10 +71,12 @@
 
         // Exibe todos os dados inicialmente
         filtrarDados();
+        statusDiv.textContent = ''; // limpa mensagem
       } catch (err) {
         console.error('Erro ao carregar dados:', err);
+        statusDiv.textContent = 'Erro ao carregar dados. Verifique a planilha.';
         const tbody = document.querySelector('#tabelaResultados tbody');
-        tbody.innerHTML = `<tr><td colspan="3">Erro ao carregar dados. Verifique a planilha.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="3">Erro ao carregar dados.</td></tr>`;
       }
     }
 
@@ -87,8 +88,10 @@
       tbody.innerHTML = '';
 
       if (resultados.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3">Nenhum resultado encontrado.</td></tr>`;
+        document.getElementById('status').textContent = 'Nenhum resultado encontrado.';
         return;
+      } else {
+        document.getElementById('status').textContent = '';
       }
 
       resultados.forEach(l => {
@@ -101,7 +104,6 @@
         }
 
         const linkZap = `https://wa.me/${telefone}`;
-
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${nome}</td>
