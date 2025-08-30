@@ -5,94 +5,107 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Consulta Prestadores - Flor de Maria</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
-    h1 { color: #333; margin-bottom: 20px; }
-    h2 { margin-top: 30px; color: #444; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; background: white; }
-    th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
-    th { background-color: #eee; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f4f4f4;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    h2 {
+      background: #ddd;
+      padding: 8px;
+      margin-top: 25px;
+      border-radius: 5px;
+    }
+    table {
+      border-collapse: collapse;
+      margin-top: 10px;
+      background: white;
+      table-layout: auto; /* largura automática baseada no conteúdo */
+      width: auto;        /* não ocupa 100% da tela */
+      min-width: 300px;   /* evita ficar muito estreita */
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      text-align: left;
+      white-space: nowrap; /* evita quebra de texto em números/links */
+    }
+    th {
+      background-color: #eee;
+    }
   </style>
 </head>
 <body>
   <h1>Prestadores Flor de Maria</h1>
-
   <div id="conteudo">Carregando dados...</div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script>
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTr4FxiY5aB2DdJ_bQfxg-ZRwud8xTsK_W2M8a2lnk6xtRd1854GH7nmRQM2tiWICBqIi6za3eKxDuZ/pub?gid=0&single=true&output=csv";
 
     async function carregarDados() {
+      const container = document.getElementById("conteudo");
+      container.innerHTML = "Carregando dados...";
+
       try {
         const response = await fetch(CSV_URL);
-        if (!response.ok) throw new Error("Erro ao buscar o CSV");
         const csvText = await response.text();
 
         Papa.parse(csvText, {
           header: true,
           skipEmptyLines: true,
-          complete: function(results) {
-            const dados = results.data.map(l => ({
-              nome: l.Nome || "",
-              telefone: l.Telefone || "",
-              categoria: l.Categoria || ""
-            }));
+          complete: function(result) {
+            const rows = result.data;
 
-            exibirPorCategoria(dados);
+            // Agrupar por categoria
+            const categorias = {};
+            rows.forEach(l => {
+              const nome = l["Nome"];
+              const telefone = l["Telefone"];
+              const categoria = l["Categoria"];
+              if (!categorias[categoria]) categorias[categoria] = [];
+              categorias[categoria].push({ nome, telefone });
+            });
+
+            // Montar HTML
+            let html = "";
+            for (const cat in categorias) {
+              html += `<h2>${cat}</h2>`;
+              html += `<table>
+                        <thead>
+                          <tr>
+                            <th>Nome</th>
+                            <th>Telefone</th>
+                            <th>WhatsApp</th>
+                          </tr>
+                        </thead>
+                        <tbody>`;
+              categorias[cat].forEach(item => {
+                let telefoneLimpo = (item.telefone || "").replace(/\D/g, "");
+                if (telefoneLimpo.length === 8 || telefoneLimpo.length === 9) {
+                  telefoneLimpo = "5582" + telefoneLimpo;
+                }
+                const linkZap = telefoneLimpo ? `<a href="https://wa.me/${telefoneLimpo}" target="_blank">Falar no WhatsApp</a>` : "";
+                html += `<tr>
+                          <td>${item.nome || ""}</td>
+                          <td>${item.telefone || ""}</td>
+                          <td>${linkZap}</td>
+                        </tr>`;
+              });
+              html += "</tbody></table>";
+            }
+
+            container.innerHTML = html;
           }
         });
-      } catch (e) {
-        document.getElementById("conteudo").innerHTML = "<p style='color:red'>Erro ao carregar os dados.</p>";
+      } catch (error) {
+        container.innerHTML = "Erro ao carregar dados.";
+        console.error(error);
       }
-    }
-
-    function exibirPorCategoria(dados) {
-      const conteudo = document.getElementById("conteudo");
-      conteudo.innerHTML = "";
-
-      // Agrupar por categoria
-      const categorias = [...new Set(dados.map(d => d.categoria).filter(Boolean))];
-
-      categorias.forEach(cat => {
-        const section = document.createElement("div");
-
-        // Título da categoria
-        const titulo = document.createElement("h2");
-        titulo.textContent = cat;
-        section.appendChild(titulo);
-
-        // Criar tabela da categoria
-        const tabela = document.createElement("table");
-        tabela.innerHTML = `
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Telefone</th>
-              <th>WhatsApp</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        `;
-
-        const tbody = tabela.querySelector("tbody");
-        dados.filter(d => d.categoria === cat).forEach(d => {
-          let telefoneLimpo = (d.telefone || "").replace(/\D/g, "");
-          if (telefoneLimpo.length === 8 || telefoneLimpo.length === 9) {
-            telefoneLimpo = "5582" + telefoneLimpo;
-          }
-
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${d.nome}</td>
-            <td>${d.telefone}</td>
-            <td><a href="https://wa.me/${telefoneLimpo}" target="_blank">Falar no WhatsApp</a></td>
-          `;
-          tbody.appendChild(row);
-        });
-
-        section.appendChild(tabela);
-        conteudo.appendChild(section);
-      });
     }
 
     carregarDados();
