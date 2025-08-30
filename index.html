@@ -103,4 +103,16 @@
         const linkZap = `https://wa.me/${telefone}`;
 
         const row = document.createElement('tr');
-        row.innerHTML
+        row.innerHTML = `
+          <td>${nome}</td>
+          <td>${l.Telefone || ''}</td>
+          <td><a href="${linkZap}" target="_blank">Falar no WhatsApp</a></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    carregarCategoriasEDados();
+  </script>
+</body>
+</html>
