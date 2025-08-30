@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>Prestadores Flor de Maria</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
@@ -36,17 +35,20 @@
   </table>
 
   <script>
-    const SHEET_ID = '1CN1_6U1Ad7Hc28rQzbkSBwIIJr43ZgDiVb168ISrLGo';
-    const API_KEY = 'AIzaSyD82b6FirPSEZ0b4vQGb2AIvaFuMEbesvo'; // pode manter ou trocar por uma nova
-    const ABA_DADOS = 'Dados';
+    // LINK DO CSV PUBLICADO NA WEB
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTr4FxiY5aB2DdJ_bQfxg-ZRwud8xTsK_W2M8a2lnk6xtRd1854GH7nmRQM2tiWICBqIi6za3eKxDuZ/pub?gid=0&single=true&output=csv';
 
     let todosOsDados = [];
 
+    // Função para ler CSV e converter em array
     async function carregarCategoriasEDados() {
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${ABA_DADOS}!A2:C?key=${API_KEY}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      todosOsDados = data.values || [];
+      const res = await fetch(CSV_URL);
+      const csvText = await res.text();
+      todosOsDados = csvText
+        .trim()
+        .split('\n')
+        .slice(1) // Ignora cabeçalho
+        .map(linha => linha.split(',').map(c => c.trim()));
 
       // Extrair categorias únicas da coluna C (índice 2)
       const categorias = [...new Set(todosOsDados.map(l => l[2]))].filter(Boolean).sort();
