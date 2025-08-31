@@ -66,7 +66,6 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script>
-    // URL atualizada da planilha
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTr4FxiY5aB2DdJ_bQfxg-ZRwud8xTsK_W2M8a2lnk6xtRd1854GH7nmRQM2tiWICBqIi6za3eKxDuZ/pub?output=csv";
 
     let categorias = {};
@@ -96,9 +95,14 @@
               const nome = l["Nome"]?.trim();
               const telefone = l["Telefone"]?.trim();
               const categoria = l["Categoria"]?.trim();
-              if (!nome || !categoria) return; // ignora linhas vazias
+              if (!nome || !categoria) return;
               if (!categorias[categoria]) categorias[categoria] = [];
               categorias[categoria].push({ nome, telefone });
+            });
+
+            // Ordenar registros de cada categoria por nome
+            Object.keys(categorias).forEach(cat => {
+              categorias[cat].sort((a, b) => a.nome.localeCompare(b.nome));
             });
 
             todasCategorias = Object.keys(categorias);
@@ -114,7 +118,6 @@
 
             renderizar("todos");
 
-            // Evento de mudança
             select.addEventListener("change", () => {
               renderizar(select.value);
             });
