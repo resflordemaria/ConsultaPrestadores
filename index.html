@@ -89,7 +89,6 @@
               return;
             }
 
-            // Agrupar por categoria
             categorias = {};
             rows.forEach(l => {
               const nome = l["Nome"]?.trim();
@@ -100,12 +99,13 @@
               categorias[categoria].push({ nome, telefone });
             });
 
-            // Ordenar registros de cada categoria por nome
+            // Ordenar os prestadores de cada categoria
             Object.keys(categorias).forEach(cat => {
               categorias[cat].sort((a, b) => a.nome.localeCompare(b.nome));
             });
 
-            todasCategorias = Object.keys(categorias);
+            // Ordenar as categorias alfabeticamente
+            todasCategorias = Object.keys(categorias).sort((a, b) => a.localeCompare(b));
 
             // Preencher select
             const select = document.getElementById("categoriaSelect");
